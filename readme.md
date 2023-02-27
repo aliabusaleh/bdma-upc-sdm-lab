@@ -46,7 +46,7 @@ done
   
 [//]: # (  * I will add this later )
 
-* unzip the files in ``./Samples/papers`` <br> ``./samples/citations``<br> ``./samples/embeddings`` <br>
+* unzip the files in <br> ``./Samples/papers`` <br> ``./samples/citations``<br> ``./samples/embeddings`` <br>
 * run the [script](data_preperation.py)
   * This script change <b>JSONL</b> into <b>JSON</b>
   * randomize the journals.
