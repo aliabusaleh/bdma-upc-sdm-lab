@@ -201,7 +201,89 @@ conf = [
     "month": "February",
     "submissionDeadline": ""
   }]
+
+# random country
+countries = [
+    {
+  "name": "Andorra",
+  "city": "Andorra la Vella"
+}, {
+  "name": "Albania",
+  "city": "Tirana"
+}, {
+  "name": "Austria",
+  "city": "Vienna"
+}, {
+  "name": "Åland Islands",
+  "city": "Mariehamn"
+}, {
+  "name": "Bosnia and Herzegovina",
+  "city": "Sarajevo"
+}, {
+  "name": "Belgium",
+  "city": "Brussels"
+}, {
+  "name": "Bulgaria",
+  "city": "Sofia"
+}, {
+  "name": "Belarus",
+  "city": "Minsk"
+}, {
+  "name": "Switzerland",
+  "city": "Bern"
+}, {
+  "name": "Cyprus",
+  "city": "Nicosia"
+}, {
+  "name": "Czech Republic",
+  "city": "Prague"
+}, {
+  "name": "Germany",
+  "city": "Berlin"
+}, {
+  "name": "Denmark",
+  "city": "Copenhagen"
+}, {
+  "name": "Estonia",
+  "city": "Tallinn"
+}, {
+  "name": "Spain",
+  "city": "Madrid"
+}, {
+  "name": "Finland",
+  "city": "Helsinki"
+}, {
+  "name": "Faroe Islands",
+  "city": "Tórshavn"
+}, {
+  "name": "France",
+  "city": "Paris"
+}, {
+  "name": "United Kingdom",
+  "city": "London"
+}, {
+  "name": "Guernsey",
+  "city": "Saint Peter Port"
+}, {
+  "name": "Greece",
+  "city": "Athens"
+}, {
+  "name": "Croatia",
+  "city": "Zagreb"
+}, {
+  "name": "Hungary",
+  "city": "Budapest"
+}, {
+  "name": "Ireland",
+  "city": "Dublin"
+}]
+
+paper_ids = [paper['corpusid'] for paper in papers]
+
 for paper in papers:
+    conidx_cty = int(random.randint(0, 23))
+    paper['country'] = countries[conidx_cty]['name']
+    paper['city'] = countries[conidx_cty]['city']
     if not paper.get('journal'):
         conidx = int(random.randint(0, 12))
         paper['venue'] = conf[conidx]['title']
@@ -216,9 +298,21 @@ for paper in papers:
 with open('./preprocessed_data/papers_json.json', 'w') as fout:
     json.dump(papers, fout)
 
+
+# randomize the citation
+for cite in citations:
+    rand_id = random.randint(0, 98)
+    cite['citingcorpusid'] = str(paper_ids[rand_id])
+    cite['citedcorpusid'] = str(paper_ids[rand_id+1])
+
 # save citation as json
 with open('preprocessed_data/citation_json.json', 'w') as fout:
     json.dump(citations, fout)
+
+# save paper_ids as json
+with open('preprocessed_data/paper_ids_json.json', 'w') as fout:
+    json.dump(paper_ids, fout)
+
 
 # for a in annotations['paragraph'][:10]: print(a)
 # for a in annotations['bibref'][:10]: print(a)

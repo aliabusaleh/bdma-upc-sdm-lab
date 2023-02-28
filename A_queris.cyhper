@@ -1,0 +1,39 @@
+// load the Data into cypher
+
+CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
+CREATE (p:paper {doi: paper.externalids.DOI, CorpusId: paper.externalids.CorpusId , title: paper.title, abstract: "this is nice paper!"})
+WITH p,paper,  paper.authors AS authors
+UNWIND authors AS author
+CREATE (a:author {name: author.name, authorId: author.authorId})
+CREATE (p)-[:writtenBy]->(a)
+WITH p, paper, p.journal AS journal
+CREATE (j:journal {name: journal.name})
+WITH p, j,paper,  journal.volume AS volume where paper.journal is not null
+CREATE (v:volume {number: volume})
+create (v)-[:publishedIn]->(j)
+CREATE (p)-[:isIn]->(v)
+create (y:Year {year: p.year})
+create (v)-[:inYear]->(y)
+with p, paper, paper.s2fieldsofstudy as s2fields where paper.s2fieldsofstudy is not null
+UNWIND s2fields AS s2f
+CREATE (t:topics {name: s2f.category})
+create (t)<-[:relatedTo]-(p)
+with p, paper, paper.venue as ven where paper.venue is not null
+create (pro:proceeding {Edition: p.edition})
+create (c:conference {name: ven})
+create (p)-[:PublishedIn]->(pro)
+create (y:Year {year: p.year})
+create (pro)-[:inYear]->(y)
+create (pro)-[:of]->(c)
+create (ci:City {name: paper.city})
+create (co:Country{name: paper.country})
+create (pro)-[:heldin]->(ci)
+create (ci)-[:belongsTo]->(co)
+
+
+
+// create citation relationship
+call apoc.load.json("file:E:/citation_json.json") yield value as info
+match (src:paper {CorpusId: info.citingcorpusid})
+match (dst:paper {CorpusId: info.citedcorpusid})
+create (src)-[:cites]->(dst)
