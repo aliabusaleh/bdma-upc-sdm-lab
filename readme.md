@@ -53,8 +53,12 @@ done
   * randomize the volumes.
   * randomize the proceedings.
   * randomize the conferences.
+  * randomize the citation.
+  * randomize the city.
+  * randomize the country.
   * Save the data into the folder [preprocessed_data](./preprocessed_data/)
 ### Load data into neo4j 
+#### before executing the following queries, make sure to <br> copy the files in <br> `./preprocessed_data` <br> into <br> `/path/neo4j-community-4.4.18/import`
 *  cypher queries 
   * creating the main Nodes (Paper,Journal, Author ... etc) <br>
 ```
@@ -66,7 +70,7 @@ CREATE (a:author {name: author.name, authorId: author.authorId})
 CREATE (p)-[:writtenBy]->(a)
 WITH p, paper, p.journal AS journal
 CREATE (j:journal {name: journal.name})
-WITH p, j,paper,  journal.volume AS volume
+WITH p, j,paper,  journal.volume AS volume where paper.journal is not null 
 CREATE (v:volume {number: volume})
 create (v)-[:publishedIn]->(j)
 CREATE (p)-[:isIn]->(v)
@@ -76,13 +80,28 @@ with p, paper, paper.s2fieldsofstudy as s2fields where paper.s2fieldsofstudy is 
 UNWIND s2fields AS s2f
 CREATE (t:topics {name: s2f.category})
 create (t)<-[:relatedTo]-(p)
-with p, paper.venue as ven where paper.venue is not null 
+with p, paper, paper.venue as ven where paper.venue is not null 
 create (pro:proceeding {Edition: p.edition})
 create (c:conference {name: ven})
 create (p)-[:PublishedIn]->(pro)
+create (y:Year {year: p.year})
+create (pro)-[:inYear]->(y)
 create (pro)-[:of]->(c)
+create (ci:City {name: paper.city})
+create (co:Country{name: paper.country})
+create (pro)-[:heldin]->(ci)
+create (ci)-[:belongsTo]->(co)
+
 ```
 * creating citation 
 
-[//]: # (* TO BE ADD LATER )
+```
+CALL apoc.load.json("file:E:/citation_json.json") yield value as info 
+match (src:paper {CorpusId: info.citingcorpusid})
+match (dst:paper {CorpusId: info.citedcorpusid})
+create (src)-[:cites]->(dst)
+```
+
+* view schema <br> 
+``CALL db.schema.visualization() ``
 
