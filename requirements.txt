@@ -1,2 +1,3 @@
 git+https://github.com/LIAAD/yake
 tqdm
+neo4j
