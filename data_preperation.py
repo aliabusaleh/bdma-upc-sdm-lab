@@ -278,7 +278,10 @@ countries = [
   "city": "Dublin"
 }]
 
-paper_ids = [paper['corpusid'] for paper in papers]
+# build map to paper - authors
+paper_map = [{paper["externalids"]["CorpusId"]: paper['authors']} for paper in papers]
+
+paper_ids = list(set([paper['corpusid'] for paper in papers]))
 
 for paper in papers:
     conidx_cty = int(random.randint(0, 23))
@@ -288,11 +291,17 @@ for paper in papers:
         conidx = int(random.randint(0, 12))
         paper['venue'] = conf[conidx]['title']
         paper['edition'] = int(random.randint(0, 20)) # very stupid way to format it !
+        paper['journal'] = None
     else:
         paper['journal']['name'] = list(journals.values())[int(random.randint(0, 71))]
+        paper['venue'] = None
         # if no volume - fake it!
         if not paper['journal']['volume']:
             paper['journal']['volume'] = random.randint(1, 99)
+    # assign reviewers
+    review_rand = int(random.randint(0, 98))
+    paper['reviewers'] = list(paper_map[review_rand].values())[0] \
+        if str(paper['corpusid']) != list(paper_map[review_rand +1].keys())[0] else list(paper_map[review_rand+1].values())[0]
 
 # save paper changes
 with open('./preprocessed_data/papers_json.json', 'w') as fout:
@@ -314,17 +323,3 @@ with open('preprocessed_data/paper_ids_json.json', 'w') as fout:
     json.dump(paper_ids, fout)
 
 
-# for a in annotations['paragraph'][:10]: print(a)
-# for a in annotations['bibref'][:10]: print(a)
-# for a in annotations['bibentry'][:10]: print(a)
-#
-#
-# def text_of(type):
-#     return [text[a['start']:a['end']] for a in annotations[type]]
-#
-#
-# text_of('abstract')
-#
-# print('\n\n'.join(text_of('paragraph')[:3]))
-#
-# print('\n'.join(text_of('bibref')[:10]))
