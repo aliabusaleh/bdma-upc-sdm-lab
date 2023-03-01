@@ -10,20 +10,20 @@ Authors:
 [Lorencio Abril, Jose Antonio](github.com/lorenc1o)
 
 ## Week 1
-In first week, we are required to :
+In the first week, we are required to:
 * Design the graph in terms of nodes and edges.
 * Load the [Data](https://blog.allenai.org/new-academic-graph-datasets-released-from-semantic-scholar-18b6b3b3140e)  into neo4j.
   * The data is taken from [Semantic Scholar](https://www.semanticscholar.org/).
-* Discuss improvements we can do to improve the design in step 1.
+* Discuss improvements we can do to the design in step 1.
 
 ## Prerequisites
  * Neo4j version [neo4j-community-4.4.18](https://neo4j.com/download-center/#community)
  * Java JDK version [11](https://www.oracle.com/es/java/technologies/javase/jdk11-archive-downloads.html)
- * other python libraries mentioned [here](requirements.txt)
+ * Other python libraries mentioned [here](requirements.txt)
 
 ## Set up the system 
-* install the prerequisites
-* install the sample data using the following <b>UNIX</b> command <br>
+* Install the prerequisites
+* Install the sample data using the following <b>UNIX</b> command <br>
 ``
 for f in $(curl https://s3-us-west-2.amazonaws.com/ai2-s2ag/samples/MANIFEST.txt)
   do curl --create-dirs "https://s3-us-west-2.amazonaws.com/ai2-s2ag/$f" -o $f
@@ -31,10 +31,10 @@ done
 `` <br>
 * Copy <b>apoc-4.4.0.14-core.jar</b> into ``./path/neo4j-community-4.4.18/plugins``
   * Path is your path for the neo4j
-* edit ``./path/neo4j-community-4.4.18/conf/neo4j.conf``
+* Edit ``./path/neo4j-community-4.4.18/conf/neo4j.conf``
   * Create Database ``dbms.default_database=GraphLab``
-  * add ``apoc.import.file.enabled=true`` to enable APOC plugin
-  * disable authorization ``dbms.security.auth_enabled=false``
+  * Add ``apoc.import.file.enabled=true`` to enable APOC plugin
+  * Disable authorization ``dbms.security.auth_enabled=false``
 
 ### Designing the Graph 
 
@@ -46,21 +46,21 @@ done
   
 [//]: # (  * I will add this later )
 
-* unzip the files in <br> ``./Samples/papers`` <br> ``./samples/citations``<br> ``./samples/embeddings`` <br>
-* run the [script](data_preperation.py)
+* Unzip the files in <br> ``./Samples/papers`` <br> ``./samples/citations``<br> ``./samples/embeddings`` <br>
+* Run the [script](data_preperation.py)
   * This script change <b>JSONL</b> into <b>JSON</b>
-  * randomize the journals.
-  * randomize the volumes.
-  * randomize the proceedings.
-  * randomize the conferences.
-  * randomize the citation.
-  * randomize the city.
-  * randomize the country.
+  * Randomize the journals.
+  * Randomize the volumes.
+  * Randomize the proceedings.
+  * Randomize the conferences.
+  * Randomize the citation.
+  * Randomize the city.
+  * Randomize the country.
   * Save the data into the folder [preprocessed_data](./preprocessed_data/)
 ### Load data into neo4j 
-#### before executing the following queries, make sure to <br> copy the files in <br> `./preprocessed_data` <br> into <br> `/path/neo4j-community-4.4.18/import`
-*  cypher queries 
-  * creating the main Nodes (Paper,Journal, Author ... etc) <br>
+#### Before executing the following queries, make sure to <br> copy the files in <br> `./preprocessed_data` <br> into <br> `/path/neo4j-community-4.4.18/import`
+*  Cypher queries 
+  * Creating the main Nodes (Paper,Journal, Author ... etc) <br>
 ```
 CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
 CREATE (p:paper {doi: paper.externalids.DOI, CorpusId: paper.externalids.CorpusId , title: paper.title, abstract: "this is nice paper!"})
@@ -93,7 +93,7 @@ create (pro)-[:heldin]->(ci)
 create (ci)-[:belongsTo]->(co)
 
 ```
-* creating citation 
+* Creating citation relationships 
 
 ```
 CALL apoc.load.json("file:E:/citation_json.json") yield value as info 
@@ -102,6 +102,6 @@ match (dst:paper {CorpusId: info.citedcorpusid})
 create (src)-[:cites]->(dst)
 ```
 
-* view schema <br> 
+* View schema <br> 
 ``CALL db.schema.visualization() ``
 
