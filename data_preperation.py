@@ -284,16 +284,16 @@ paper_map = [{paper["externalids"]["CorpusId"]: paper['authors']} for paper in p
 paper_ids = list(set([paper['corpusid'] for paper in papers]))
 
 for paper in papers:
-    conidx_cty = int(random.randint(0, 23))
+    conidx_cty = int(random.randint(0, 10))
     paper['country'] = countries[conidx_cty]['name']
     paper['city'] = countries[conidx_cty]['city']
     if not paper.get('journal'):
-        conidx = int(random.randint(0, 12))
+        conidx = int(random.randint(0, 3))
         paper['venue'] = conf[conidx]['title']
         paper['edition'] = int(random.randint(0, 20)) # very stupid way to format it !
         paper['journal'] = None
     else:
-        paper['journal']['name'] = list(journals.values())[int(random.randint(0, 71))]
+        paper['journal']['name'] = list(journals.values())[int(random.randint(0, 10))]
         paper['venue'] = None
         # if no volume - fake it!
         if not paper['journal']['volume']:
@@ -310,7 +310,7 @@ with open('./preprocessed_data/papers_json.json', 'w') as fout:
 
 # randomize the citation
 for cite in citations:
-    rand_id = random.randint(0, 98)
+    rand_id = random.randint(0, 50)
     cite['citingcorpusid'] = str(paper_ids[rand_id])
     cite['citedcorpusid'] = str(paper_ids[rand_id+1])
 
