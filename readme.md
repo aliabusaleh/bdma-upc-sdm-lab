@@ -59,49 +59,97 @@ done
   * Save the data into the folder [preprocessed_data](./preprocessed_data/)
 ### Load data into neo4j 
 #### Before executing the following queries, make sure to <br> copy the files in <br> `./preprocessed_data` <br> into <br> `/path/neo4j-community-4.4.18/import`
-*  Cypher queries 
-  * Creating the main Nodes (Paper,Journal, Author ... etc) <br>
-```
-CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
-CREATE (p:paper {doi: paper.externalids.DOI, CorpusId: paper.externalids.CorpusId , title: paper.title, abstract: "this is nice paper!"})
-WITH p,paper,  paper.authors AS authors 
-UNWIND authors AS author
-CREATE (a:author {name: author.name, authorId: author.authorId})
-CREATE (p)-[:writtenBy]->(a)
-WITH p, paper, p.journal AS journal
-CREATE (j:journal {name: journal.name})
-WITH p, j,paper,  journal.volume AS volume where paper.journal is not null 
-CREATE (v:volume {number: volume})
-create (v)-[:publishedIn]->(j)
-CREATE (p)-[:isIn]->(v)
-create (y:Year {year: p.year})
-create (v)-[:inYear]->(y)
-with p, paper, paper.s2fieldsofstudy as s2fields where paper.s2fieldsofstudy is not null
-UNWIND s2fields AS s2f
-CREATE (t:topics {name: s2f.category})
-create (t)<-[:relatedTo]-(p)
-with p, paper, paper.venue as ven where paper.venue is not null 
-create (pro:proceeding {Edition: p.edition})
-create (c:conference {name: ven})
-create (p)-[:PublishedIn]->(pro)
-create (y:Year {year: p.year})
-create (pro)-[:inYear]->(y)
-create (pro)-[:of]->(c)
-create (ci:City {name: paper.city})
-create (co:Country{name: paper.country})
-create (pro)-[:heldin]->(ci)
-create (ci)-[:belongsTo]->(co)
+#####  Cypher queries
+  * Clean the database <br>
+    ```
+    MATCH (n)
+    DETACH DELETE n
+    ```
+  * Creating the main Nodes and their relation (Paper And Author) <br>
+    ```
+    CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
+    CREATE (p:Paper {DOI: paper.externalids.DOI, CorpusId: paper.externalids.CorpusId , title: paper.title,
+    abstract: "this is nice paper!"})
+    WITH p,paper,  paper.authors AS authors
+    UNWIND authors AS author
+    CREATE (a:Author {name: author.name, authorId: author.authorId})
+    CREATE (p)-[w:WrittenBy]->(a)
+    SET w.mainAuthor = CASE when author = head(authors) then 1 END
+    ```
+  * Create Journal-related nodes and relations  <br>
+    ```
+    CALL apoc.load.json("file://papers_json.json") YIELD value
+    match (p:Paper{CorpusId: value.externalids.CorpusId})
+    WITH value  where value.journal is not null
+    CREATE (j:Journal {name: value.journal.name})
+    CREATE (v:Volume {number: value.volume})
+    create (v)-[:PublishedInVolume]->(j)
+    CREATE (p:Paper{CorpusId: value.CorpusId})-[:IsIn]->(v)
+    create (y:Year {year: p.year})
+    create (v)-[:InYear]->(y)
+    ``` 
 
-```
-* Creating citation relationships 
+  * Create Conference-related nodes and relations <br>
+    ```
+    CALL apoc.load.json("file://papers_json.json") YIELD value as paper
+    match (p:Paper{CorpusId: paper.externalids.CorpusId})
+    with p, paper, paper.venue as ven where paper.venue is not null```
+    create (pro:Proceeding {edition: p.edition})* Creating citation relationships 
+    create (c:conference {name: ven})
+    create (p)-[:PublishedInProceeding]->(pro)```
+    create (y:Year {year: p.year})CALL apoc.load.json("file:E:/citation_json.json") yield value as info 
+    create (pro)-[:InYear]->(y)match (src:paper {CorpusId: info.citingcorpusid})
+    create (pro)-[:of]->(c)match (dst:paper {CorpusId: info.citedcorpusid})
+    create (ci:City {name: paper.city})create (src)-[:cites]->(dst)
+    create (co:Country{name: paper.country})```
+    create (pro)-[:Heldin]->(ci)
+    create (ci)-[:BelongsTo]->(co)* View schema <br> 
+    ```
+  * Create citations' relationships <br>
+    ```
+    call apoc.load.json("file://citation_json.json") yield value as info
+    match (src:Paper {CorpusId: info.citingcorpusid})
+    match (dst:Paper {CorpusId: info.citedcorpusid})
+    create (src)-[:Cites]->(dst)
+    ```
+  * Create reviewers edges <br>
+    ```
+    CALL apoc.load.json("file://papers_json.json") YIELD value
+    match (p:Paper{CorpusId: value.externalids.CorpusId})
+    WITH p, value.reviewers as reviewers
+    unwind reviewers as reviewer
+    match (a:Author{authorId: reviewer.authorId})
+    create (p)-[:ReviewedBy ]->(a)
+    ```
+  * Clean duplicate edges (which might happen due to randomization)  <br>
+    ```
+    CALL apoc.periodic.iterate(
+        "MATCH (a)-[r]->(b)
+         WHERE id(a) < id(b)
+         RETURN a, b, type(r) as type, collect(r) as rels",
+        "FOREACH(rel in tail(rels) | DELETE rel)"
+        , {batchSize:1000, parallel:false}
+      );
+    ```
 
-```
-CALL apoc.load.json("file:E:/citation_json.json") yield value as info 
-match (src:paper {CorpusId: info.citingcorpusid})
-match (dst:paper {CorpusId: info.citedcorpusid})
-create (src)-[:cites]->(dst)
-```
+### Extend the Graph in neo4j  
+<b> This is part A.3 in the lab, it needs to be executed after Loading the data </b> <br>
 
-* View schema <br> 
-``CALL db.schema.visualization() ``
+##### Cypher queries
+
+* Create Affiliation and related nodes/edges <br>
+  ```
+  CALL apoc.load.json("file://authors_json.json") YIELD value AS author_data
+  match (a:Author {authorId: author_data.author_id})
+  MERGE (aff:Institution{name:author_data.affiliations})
+  create (a)-[:AffiliatedTo]->(aff)
+  with aff, author_data 
+  match (c:Country{name:author_data.country}) 
+  create (aff)-[:IsInCountry]->(c)
+  ```
+* add Reviews attribute (static text for all relations for simplicity) <br>
+  ```
+  MATCH (n:Paper)-[r:ReviewedBy]->(a:Author)
+  SET r.details = "es bien!"
+  ```
 
