@@ -1,6 +1,8 @@
 import json
 import random
 
+import university as university
+
 ## Papers
 papers = [json.loads(l) for l in open("samples/papers/papers-sample.jsonl", "r", encoding="utf8").readlines()]
 
@@ -12,7 +14,8 @@ citations = [json.loads(l) for l in
 embeddings = [json.loads(l) for l in
               open("samples/embeddings/embeddings-sample.jsonl", "r", encoding="utf8").readlines()]
 
-##
+# ## Authors
+# authors = [json.loads(l) for l in open("samples/authors/authors-sample.jsonl", "r", encoding="utf8").readlines()]
 
 ## S2ORC
 docs = [json.loads(l) for l in open("samples/s2orc/s2orc-sample.jsonl", "r", encoding="utf8").readlines()]
@@ -205,90 +208,68 @@ conf = [
 # random country
 countries = [
     {
-  "name": "Andorra",
-  "city": "Andorra la Vella"
-}, {
-  "name": "Albania",
-  "city": "Tirana"
-}, {
-  "name": "Austria",
-  "city": "Vienna"
-}, {
-  "name": "Åland Islands",
-  "city": "Mariehamn"
-}, {
-  "name": "Bosnia and Herzegovina",
-  "city": "Sarajevo"
-}, {
   "name": "Belgium",
   "city": "Brussels"
 }, {
-  "name": "Bulgaria",
-  "city": "Sofia"
-}, {
-  "name": "Belarus",
-  "city": "Minsk"
-}, {
-  "name": "Switzerland",
-  "city": "Bern"
-}, {
-  "name": "Cyprus",
-  "city": "Nicosia"
-}, {
-  "name": "Czech Republic",
-  "city": "Prague"
+  "name": "Italy",
+  "city": "Rome"
 }, {
   "name": "Germany",
   "city": "Berlin"
 }, {
-  "name": "Denmark",
-  "city": "Copenhagen"
-}, {
-  "name": "Estonia",
-  "city": "Tallinn"
-}, {
   "name": "Spain",
-  "city": "Madrid"
-}, {
-  "name": "Finland",
-  "city": "Helsinki"
-}, {
-  "name": "Faroe Islands",
-  "city": "Tórshavn"
+  "city": "Barcelona"
 }, {
   "name": "France",
   "city": "Paris"
 }, {
   "name": "United Kingdom",
   "city": "London"
-}, {
-  "name": "Guernsey",
-  "city": "Saint Peter Port"
-}, {
-  "name": "Greece",
-  "city": "Athens"
-}, {
-  "name": "Croatia",
-  "city": "Zagreb"
-}, {
-  "name": "Hungary",
-  "city": "Budapest"
-}, {
-  "name": "Ireland",
-  "city": "Dublin"
 }]
+
+# random affiliation
+
+affiliations = [
+    {
+        "name": "ULB",
+        "country":  "Belgium",
+        "city": "Brussels"
+     },
+    {
+        "name": "UPC",
+        "country":"Spain",
+        "city": "Barcelona"
+     },
+    {
+        "name": "UniPd",
+        "country": "Italy",
+        "city": "Rome"
+    },
+    {
+        "name": "CS",
+        "country": "France",
+        "city": "Paris"
+    },
+    {
+        "name": "Humboldt University of Berlin",
+        "country": "Germany",
+        "city": "Berlin"
+    }
+]
 
 # build map to paper - authors
 paper_map = [{paper["externalids"]["CorpusId"]: paper['authors']} for paper in papers]
 
 paper_ids = list(set([paper['corpusid'] for paper in papers]))
 
+authors_ids = []
 for paper in papers:
-    conidx_cty = int(random.randint(0, 10))
+    authors_ids.extend([author['authorId'] for author in paper['authors']])
+    conidx_cty = int(random.randint(0, 5))
     paper['country'] = countries[conidx_cty]['name']
     paper['city'] = countries[conidx_cty]['city']
     if not paper.get('journal'):
-        conidx = int(random.randint(0, 3))
+        conidx = int(random.randint(0, 2))
         paper['venue'] = conf[conidx]['title']
         paper['edition'] = int(random.randint(0, 20)) # very stupid way to format it !
         paper['journal'] = None
@@ -303,10 +284,6 @@ for paper in papers:
     paper['reviewers'] = list(paper_map[review_rand].values())[0] \
         if str(paper['corpusid']) != list(paper_map[review_rand +1].keys())[0] else list(paper_map[review_rand+1].values())[0]
 
-# save paper changes
-with open('./preprocessed_data/papers_json.json', 'w') as fout:
-    json.dump(papers, fout)
-
 
 # randomize the citation
 for cite in citations:
@@ -314,9 +291,27 @@ for cite in citations:
     cite['citingcorpusid'] = str(paper_ids[rand_id])
     cite['citedcorpusid'] = str(paper_ids[rand_id+1])
 
+# randomize the affiliations
+authors = []
+for author_id in authors_ids:
+    uni_rand = random.randint(0,4)
+    authors.append({'author_id': author_id,
+                   'affiliations': affiliations[uni_rand]['name'],
+                    'country': affiliations[uni_rand]['country'],
+                    'city': affiliations[uni_rand]['city']
+                    })
+
+# save paper changes
+with open('./preprocessed_data/papers_json.json', 'w') as fout:
+    json.dump(papers, fout)
+
 # save citation as json
 with open('preprocessed_data/citation_json.json', 'w') as fout:
     json.dump(citations, fout)
+
+# save authors as json
+with open('preprocessed_data/authors_json.json', 'w') as fout:
+    json.dump(authors, fout)
 
 # save paper_ids as json
 with open('preprocessed_data/paper_ids_json.json', 'w') as fout:

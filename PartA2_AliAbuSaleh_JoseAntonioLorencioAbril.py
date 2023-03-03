@@ -20,19 +20,15 @@ class PropertyGraphLab:
     def __init__(self, uri, user, password):
         # in case you have auth username/password, please modify it  auth=(user, password)
         self.driver = GraphDatabase.driver(uri, auth=(user, password) if (user and password) else None)
-        self.__clean_previous_data()
-        self.__load_data()
 
-    def __load_data(self):
-        return self._create_main_nodes(), \
+    def load_data(self):
+        return self.__clean_previous_data(), \
+               self._create_main_nodes(), \
                self._create_journal_nodes(), \
                self._create_conference_nodes(), \
                self._create_citation_nodes(), \
                self._create_reviewers_edges(), \
                self._clean_edges()
-
-    def extend_graph(self):
-        return self._create_affiliations(), self._add_review_attributtes()
 
     def _create_main_nodes(self):
         # create paper nodes
@@ -126,35 +122,8 @@ class PropertyGraphLab:
         '''
         return self.query(query_v2)
 
-    def _create_affiliations(self):
-        query = '''  
-        CALL apoc.load.json("file://authors_json.json") YIELD value AS author_data
-        match (a:Author {authorId: author_data.author_id})
-        MERGE (aff:Institution{name:author_data.affiliations})
-        create (a)-[:AffiliatedTo]->(aff)
-        with aff, author_data 
-        match (c:Country{name:author_data.country}) 
-        create (aff)-[:IsInCountry]->(c)
-        '''
-        return self.query(query)
-
-    def _add_review_attributtes(self):
-        query = '''
-        MATCH (n:Paper)-[r:ReviewedBy]->(a:Author)
-        SET r.details = "es bien!"
-        '''
-
-        return self.query(query)
-
     def close(self):
         self.driver.close()
-
-    @staticmethod
-    def _create_and_return_greeting(tx, message):
-        result = tx.run("CREATE (a:Greeting) "
-                        "SET a.message = $message "
-                        "RETURN a.message + ', from node ' + id(a)", message=message)
-        return result.single()[0]
 
     def query(self, query, db=None):
         assert self.driver is not None, "Driver not initialized!"
@@ -186,44 +155,23 @@ class PropertyGraphLab:
                     '''
             return self.query(query)
 
-def print_menu():
-    print(color.BLUE)
-    menu_message = "Please choose the task to perform \n (1) A.2 (create the graph and load the data) " + \
-                   "\n (2) A.3 update the graph schema (add affiliations and reviews details)\n" + \
-                   " (3) enter console mode ( execute Cypher quires) \n " + \
-                   "enter (4) to exit. \n Input: \t"
-    mode = int(input(menu_message))
-    while mode not in [1, 2, 3, 4]:
-        mode = input(menu_message)
-    else:
-        return mode
-
 
 if __name__ == '__main__':
-    graph_handler = None
+    graph_handler = PropertyGraphLab("bolt://localhost:7687", "neo4j", "password")
     print(color.GREEN)
-    print("Main Program Menu, Please follow the instructions! \n ")
+    print("hello, world! Cypher is speaking! connection established \n ")
     print(color.BLUE)
-    menu_message = "Please choose the task to perform \n (1) A.2 (create the graph and load the data) " + \
-                   "\n (2) A.3 update the graph schema (add affiliations and reviews details)\n" + \
-                   " (3) enter console mode ( execute Cypher quires) \n " + \
-                   "enter (4) to exit. \n Input: \t"
-    mode = print_menu()
-    while (1):
-        if mode == 1:
-            graph_handler = PropertyGraphLab("bolt://localhost:7687", "neo4j", "password")
-            print_menu()
-        elif mode == 2:
-            if not graph_handler:
-                print(color.RED + 'please initialize the database first \n')
-                print_menu()
-            else:
-                graph_handler.extend_graph()
-        elif mode == 3 or 4:
-            while (1):
-                inp_ = input(color.CYAN + 'Please write your CYPHER query to execute it (to exit enter \"EXIT\"/E) \n ')
-                if inp_ in ['EXIT', 'E', 'exit', 'e']:
-                    break
-                else:
-                    print(graph_handler.query(inp_))
+    graph_handler.load_data()
+    print(color.GREEN + 'Database initiated and loaded, see you!')
+
+
+
+
+
+
+
+
+
+
+
 
