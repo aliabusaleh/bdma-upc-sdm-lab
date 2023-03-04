@@ -53,7 +53,7 @@ class PropertyGraphLab:
                 CREATE (j:Journal {name: value.journal.name})
                 CREATE (v:Volume {number: value.volume})
                 create (v)-[:PublishedInVolume]->(j)
-                CREATE (p:Paper{CorpusId: value.CorpusId})-[:IsIn]->(v)
+                CREATE (p)-[:IsIn]->(v)
                 create (y:Year {year: p.year})
                 create (v)-[:InYear]->(y)
                 '''
@@ -66,7 +66,7 @@ class PropertyGraphLab:
                 match (p:Paper{CorpusId: paper.externalids.CorpusId})
                 with p, paper, paper.venue as ven where paper.venue is not null
                 create (pro:Proceeding {edition: p.edition})
-                create (c:conference {name: ven})
+                create (c:Conference {name: ven})
                 create (p)-[:PublishedInProceeding]->(pro)
                 create (y:Year {year: p.year})
                 create (pro)-[:InYear]->(y)
