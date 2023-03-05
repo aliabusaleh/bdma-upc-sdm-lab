@@ -1,26 +1,28 @@
 import json
 import random
 
-import university as university
-
 ## Papers
-papers = [json.loads(l) for l in open("samples/papers/papers-sample.jsonl", "r", encoding="utf8").readlines()]
+papers = [json.loads(l) for l in open("semantic_sch_data/papers.json", "r", encoding="utf8").readlines()]
 
 ## Citations
 citations = [json.loads(l) for l in
-             open("samples/citations/citations-sample.jsonl", "r", encoding="utf8").readlines()]
+             open("semantic_sch_data/citations.json", "r", encoding="utf8").readlines()]
+# Transform the CorpusId into integers
+for citation in citations:
+    citation['citingCorpusId'] = int(citation['citingCorpusId'])
+    citation['citedCorpusId'] = int(citation['citedCorpusId'])
 
 ## Embeddings
-embeddings = [json.loads(l) for l in
-              open("samples/embeddings/embeddings-sample.jsonl", "r", encoding="utf8").readlines()]
+#embeddings = [json.loads(l) for l in
+#              open("samples/embeddings/embeddings-sample.jsonl", "r", encoding="utf8").readlines()]
 
 # ## Authors
 # authors = [json.loads(l) for l in open("samples/authors/authors-sample.jsonl", "r", encoding="utf8").readlines()]
 
 ## S2ORC
-docs = [json.loads(l) for l in open("samples/s2orc/s2orc-sample.jsonl", "r", encoding="utf8").readlines()]
-text = docs[0]['content']['text']
-annotations = {k: json.loads(v) for k, v in docs[0]['content']['annotations'].items() if v}
+#docs = [json.loads(l) for l in open("samples/s2orc/s2orc-sample.jsonl", "r", encoding="utf8").readlines()]
+#text = docs[0]['content']['text']
+#annotations = {k: json.loads(v) for k, v in docs[0]['content']['annotations'].items() if v}
 
 # random journal
 journals = {
@@ -258,9 +260,11 @@ affiliations = [
 ]
 
 # build map to paper - authors
-paper_map = [{paper["externalids"]["CorpusId"]: paper['authors']} for paper in papers]
+paper_authors = {}
+for paper in papers:
+    paper_authors[paper['externalIds']['CorpusId']] = [author['authorId'] for author in paper['authors']]
 
-paper_ids = list(set([paper['corpusid'] for paper in papers]))
+paper_ids = list(set([paper["externalIds"]["CorpusId"] for paper in papers]))
 
 authors_ids = []
 for paper in papers:
@@ -268,28 +272,29 @@ for paper in papers:
     conidx_cty = int(random.randint(0, 5))
     paper['country'] = countries[conidx_cty]['name']
     paper['city'] = countries[conidx_cty]['city']
-    if not paper.get('journal'):
-        conidx = int(random.randint(0, 2))
+    # As there are few conferences, we fake one with probability 1/3
+    if not paper.get('journal') or random.randint(0, 2) == 0:
+        conidx = int(random.randint(0, 12))
         paper['venue'] = conf[conidx]['title']
-        paper['edition'] = int(random.randint(0, 20)) # very stupid way to format it !
+        paper['edition'] = int(random.randint(0, 3)) # simple way to fake edition
         paper['journal'] = None
     else:
         paper['journal']['name'] = list(journals.values())[int(random.randint(0, 10))]
         paper['venue'] = None
         # if no volume - fake it!
-        if not paper['journal']['volume']:
-            paper['journal']['volume'] = random.randint(1, 99)
-    # assign reviewers
-    review_rand = int(random.randint(0, 98))
-    paper['reviewers'] = list(paper_map[review_rand].values())[0] \
-        if str(paper['corpusid']) != list(paper_map[review_rand +1].keys())[0] else list(paper_map[review_rand+1].values())[0]
+        if not paper['journal'].get('volume'):
+            paper['journal']['volume'] = int(random.randint(0, 10))
 
-
-# randomize the citation
-for cite in citations:
-    rand_id = random.randint(0, 50)
-    cite['citingcorpusid'] = str(paper_ids[rand_id])
-    cite['citedcorpusid'] = str(paper_ids[rand_id+1])
+for paper in papers:
+    # assign reviewers: a reviewer is an author different from the paper's authors
+    howmany = int(random.randint(1, 4))
+    paper['reviewers'] = []
+    while howmany > 0:
+        selected = int(random.randint(0, len(authors_ids)-1))
+        possible_reviewer = authors_ids[selected]
+        if possible_reviewer not in paper_authors[paper['externalIds']['CorpusId']]:
+            paper['reviewers'].append(authors_ids[selected])
+            howmany -= 1
 
 # randomize the affiliations
 authors = []
