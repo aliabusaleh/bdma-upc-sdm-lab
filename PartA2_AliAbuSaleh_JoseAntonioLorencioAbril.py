@@ -33,11 +33,11 @@ class PropertyGraphLab:
     """
     def load_data(self):
         return self.__clean_previous_data(), \
-               self._CREATE_main_nodes(), \
-               self._CREATE_journal_nodes(), \
-               self._CREATE_conference_nodes(), \
-               self._CREATE_citation_nodes(), \
-               self._CREATE_reviewers_edges(), \
+               self._create_main_nodes(), \
+               self._create_journal_nodes(), \
+               self._create_conference_nodes(), \
+               self._create_citation_nodes(), \
+               self._create_reviewers_edges(), \
                self._clean_edges()
 
     """
@@ -48,7 +48,7 @@ class PropertyGraphLab:
     - The json file is called papers_json.json
     - The main author is the first author in the list of authors
     """
-    def _CREATE_main_nodes(self):
+    def _create_main_nodes(self):
         print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating papers and authors..." + color.END)
         # CREATE paper nodes
         query = '''
@@ -62,23 +62,23 @@ class PropertyGraphLab:
                 '''
         return self.query(query)
 
-    def _CREATE_journal_nodes(self):
+    def _create_journal_nodes(self):
         print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating journals and volumes..." + color.END)
         # CREATE journal nodes
         query = '''
                 CALL apoc.load.json("file://papers_json.json") YIELD value
                 MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
-                WITH value WHERE value.journal IS NOT null
+                WITH p, value WHERE value.journal IS NOT null
                 CREATE (j:Journal {name: value.journal.name})
                 CREATE (v:Volume {number: value.volume})
                 CREATE (v)-[:InJournal]->(j)
-                CREATE (p:Paper{CorpusId: value.externalIds.CorpusId})-[:PublishedInVolume]->(v)
+                CREATE (p)-[:PublishedInVolume]->(v)
                 CREATE (y:Year {year: p.year})
                 CREATE (v)-[:InYear]->(y)
                 '''
         return self.query(query)
 
-    def _CREATE_conference_nodes(self):
+    def _create_conference_nodes(self):
         print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating conferences, proceedings, and cities..." + color.END)
         # CREATE conference nodes
         query = '''
@@ -98,7 +98,7 @@ class PropertyGraphLab:
                   '''
         return self.query(query)
 
-    def _CREATE_citation_nodes(self):
+    def _create_citation_nodes(self):
         print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating citations..." + color.END)
         # CREATE citation nodes
         query = '''
@@ -109,7 +109,7 @@ class PropertyGraphLab:
                   '''
         return self.query(query)
 
-    def _CREATE_reviewers_edges(self):
+    def _create_reviewers_edges(self):
         print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating reviewers..." + color.END)
         # CREATE reviewers edges
         query = '''
