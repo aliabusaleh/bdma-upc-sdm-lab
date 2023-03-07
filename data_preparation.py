@@ -287,7 +287,7 @@ for paper in papers:
 
 for paper in papers:
     # assign reviewers: a reviewer is an author different from the paper's authors
-    howmany = int(random.randint(1, 4))
+    howmany = random.randint(1, 4)
     paper['reviewers'] = []
     while howmany > 0:
         selected = int(random.randint(0, len(authors_ids)-1))
