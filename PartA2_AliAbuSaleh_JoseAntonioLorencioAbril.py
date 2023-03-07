@@ -34,6 +34,7 @@ class PropertyGraphLab:
     def load_data(self):
         return self.__clean_previous_data(), \
                self._create_main_nodes(), \
+               self._create_topics_nodes(), \
                self._create_journal_nodes(), \
                self._create_conference_nodes(), \
                self._create_citation_nodes(), \
@@ -60,6 +61,19 @@ class PropertyGraphLab:
                 CREATE (p)-[w:WrittenBy]->(a)
                 SET w.mainAuthor = CASE when author = head(authors) then 1 END
                 '''
+        return self.query(query)
+    
+    def _create_topics_nodes(self):
+        print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating topics and keywords..." + color.END)
+        query = '''
+            CALL apoc.load.json("file://papers_json.json") YIELD value
+            MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
+            WITH  p, value.s2FieldsOfStudy as s2fields
+            UNWIND s2fields AS s2f
+            MERGE (kw:Keyword {name: s2f.category})
+            MERGE (t:Topic {name: s2f.category})
+            MERGE (t)<-[:RelatedTo]-(kw)<-[:ContainsKeyWord]-(p)
+            '''
         return self.query(query)
 
     def _create_journal_nodes(self):

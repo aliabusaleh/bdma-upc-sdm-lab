@@ -8,14 +8,22 @@ api_key = "1WBrQVQGeo6ZZI2eJmWMk2eFnmgl8W1T7VEDvRyQ"
 keywords = ['data science', 'big data', 'databases']
 
 # URL for the API endpoint that searches for papers
-url = 'https://api.semanticscholar.org/graph/v1/paper/search?query=data science+big data+databases&year=2022&limit=2&fields=title,externalIds,year,journal,venue,authors,abstract,s2FieldsOfStudy'
+url = 'https://api.semanticscholar.org/graph/v1/paper/search?query=data science+big data+databases&year=2023&limit=8&fields=title,externalIds,year,journal,venue,authors,abstract,s2FieldsOfStudy'
 
 # Set the headers to include your API key
 headers = {'x-api-key': api_key}
 
 # Send a GET request to the API endpoint with the query parameters and headers
 response = requests.get(url, headers=headers)
+
+# If response is not 200, print the error message and exit
+if response.status_code != 200:
+    print(response.json().get('message'))
+    exit()
+
 papers = response.json().get('data', [])
+
+
 
 depth = 2
 paper_ids = []
