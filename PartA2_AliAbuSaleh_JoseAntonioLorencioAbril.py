@@ -57,7 +57,7 @@ class PropertyGraphLab:
                 CREATE (p:Paper {DOI: paper.externalIds.DOI, CorpusId: paper.externalIds.CorpusId , title: paper.title, abstract: paper.abstract})
                 WITH p, paper.authors AS authors
                 UNWIND authors AS author
-                CREATE (a:Author {name: author.name, authorId: author.authorId})
+                MERGE (a:Author {name: author.name, authorId: author.authorId})
                 CREATE (p)-[w:WrittenBy]->(a)
                 SET w.mainAuthor = CASE when author = head(authors) then 1 END
                 '''
@@ -72,7 +72,7 @@ class PropertyGraphLab:
             UNWIND s2fields AS s2f
             MERGE (kw:Keyword {name: s2f.category})
             MERGE (t:Topic {name: s2f.category})
-            MERGE (t)<-[:RelatedTo]-(kw)<-[:ContainsKeyWord]-(p)
+            CREATE (t)<-[:RelatedTo]-(kw)<-[:ContainsKeyWord]-(p)
             '''
         return self.query(query)
 
@@ -84,7 +84,7 @@ class PropertyGraphLab:
                 MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
                 WITH p, value WHERE value.journal IS NOT null
                 CREATE (j:Journal {name: value.journal.name})
-                CREATE (v:Volume {number: value.volume})
+                CREATE (v:Volume {number: value.journal.volume})
                 CREATE (v)-[:InJournal]->(j)
                 CREATE (p)-[:PublishedInVolume]->(v)
                 CREATE (y:Year {year: p.year})
@@ -99,14 +99,14 @@ class PropertyGraphLab:
                 CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
                 MATCH (p:Paper{CorpusId: paper.externalIds.CorpusId})
                 WITH p, paper, paper.venue AS ven WHERE paper.venue IS NOT null
-                CREATE (pro:Proceeding {name: ven, edition: p.edition})
-                CREATE (c:Conference {name: ven})
+                MERGE (pro:Proceeding {name: ven, edition: paper.edition})
+                MERGE (c:Conference {name: ven})
                 CREATE (p)-[:PublishedInProceeding]->(pro)
-                CREATE (y:Year {year: p.year})
+                MERGE (y:Year {year: paper.year})
                 CREATE (pro)-[:InYear]->(y)
                 CREATE (pro)-[:ofConference]->(c)
-                CREATE (ci:City {name: paper.city})
-                CREATE (co:Country{name: paper.country})
+                MERGE (ci:City {name: paper.city})
+                MERGE (co:Country{name: paper.country})
                 CREATE (pro)-[:Heldin]->(ci)
                 CREATE (ci)-[:BelongsTo]->(co)
                   '''
@@ -132,7 +132,7 @@ class PropertyGraphLab:
             WITH p, value.reviewers AS reviewers
             UNWIND reviewers AS reviewer
             MATCH (a:Author{authorId: reviewer})
-                CREATE (p)-[:ReviewedBy]->(a)
+            CREATE (p)-[:ReviewedBy]->(a)
                   '''
         return self.query(query)
 
