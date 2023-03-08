@@ -15,8 +15,8 @@ RETURN conference, article[0..3] as MostCitedArticles, citations
 ORDER BY conference, citations desc
 
 // Best version
-MATCH (c:Conference)<-[:ofConference]-(:Proceeding)<-[:PublishedInProceeding]-(p:Paper)<-[:Cites]-(q:Paper)
-WITH c.name AS conference, p.title AS article, COUNT(*) as citations
+MATCH (c:Conference)<-[:ofConference]-(:Proceeding)<-[:PublishedInProceeding]-(p:Paper)<-[cite:Cites]-(q:Paper)
+WITH c.name AS conference, p.title AS article, COUNT(cite) as citations
 WITH conference, article, citations ORDER BY citations DESC
 WITH conference, COLLECT(article) AS articles, COLLECT(citations) AS citations
 WITH conference, [i IN range(0,size(articles)-1) | [articles[i], citations[i]]] AS ArtCit
