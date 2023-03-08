@@ -69,3 +69,14 @@ WITH j, year, publications_y2, COUNT(p) AS publications_y1
 MATCH (j:Journal)<-[:InJournal]-(v:Volume)-[:InYear]->(y:Year {year:year}), (v)<-[:PublishedInVolume]-(:Paper)<-[citation:Cites]-(:Paper)
 WITH j, publications_y2, publications_y1, COUNT(citation) AS citations_y
 RETURN j.name, toFloat(citations_y) / (publications_y1 + publications_y2) AS ImpactFactor
+
+
+// Optimized version
+
+WITH date.truncate('year', date.realtime()).year AS year
+MATCH (j:Journal)<-[:InJournal]-(v:Volume)-[:InYear]->(y:Year), (v)<-[:PublishedInVolume]-(p:Paper)
+where y.year in [year-1, year-2]
+WITH j, year, COUNT(p) AS publications
+MATCH (j)<-[:InJournal]-(v:Volume)-[:InYear]->(y:Year {year:year}), (v)<-[:PublishedInVolume]-(:Paper)<-[citation:Cites]-(:Paper)
+WITH j, publications, COUNT(citation) AS citations_y
+RETURN j.name, toFloat(citations_y) / publications AS ImpactFactor
