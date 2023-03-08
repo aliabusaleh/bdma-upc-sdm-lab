@@ -19,8 +19,7 @@ MATCH (c:Conference)<-[:ofConference]-(:Proceeding)<-[:PublishedInProceeding]-(p
 WITH c.name AS conference, p.title AS article, COUNT(*) as citations
 WITH conference, article, citations ORDER BY citations DESC
 WITH conference, COLLECT(article) AS articles, COLLECT(citations) AS citations
-WITH conference, range(0,size(articles)-1) AS idx, articles, citations
-WITH conference, [i IN idx | [articles[i], citations[i]]] AS ArtCit
+WITH conference, [i IN range(0,size(articles)-1) | [articles[i], citations[i]]] AS ArtCit
 RETURN conference, ArtCit[0..3] AS Citations
 ORDER BY conference
 
@@ -38,6 +37,14 @@ MATCH (c:conference)<-[*]-(p:Paper)-[:writtenBy]->(a:author)
 WITH c.name AS conference, a.name AS author, COUNT(*) as nParticipations
 RETURN conference, collect(author) as Authorslist, nParticipations
 order by conference, nParticipations desc
+
+// Best version
+MATCH (c:Conference)<-[:ofConference]-(pr:Proceeding)<-[:PublishedInProceeding]-(:Paper)-[:WrittenBy]->(a:Author)
+WITH c.name AS conference, a.name AS author, COUNT(pr) as nParticipations
+WHERE nParticipations >= 4
+WITH conference, COLLECT(author) as authors, COLLECT(nParticipations) as nParticipations
+WITH conference, [i IN range(0, size(authors)-1) | [authors[i],nParticipations[i]]] as authors_participations
+RETURN conference, authors_participations
 
 
 //B3:
