@@ -7,13 +7,12 @@ RETURN conference, article[0..3] as MostCitedArticles
 ORDER BY conference
 
 // Ali Version
-MATCH (c:Conference)<-[:of]-(p:Proceeding)<-[:PublishedInProceeding]-(pa:Paper)<-[cite:Cites]-(pb:Paper)
-WHERE pa <> pb
-WITH c.name AS ConferenceName, pa.title AS PaperTitle, COUNT(cite) AS NumCitations
-ORDER BY ConferenceName, NumCitations DESC
-WITH ConferenceName, COLLECT({title: PaperTitle, citations: NumCitations}) AS papers
-RETURN ConferenceName, papers[0..3] AS TopPapers
-
+MATCH (c:conference)<-[:of]-(:proceeding)<-[:PublishedInProceeding]-(p:Paper)<-[:cites*1..]-(q:Paper)
+WITH c.name as conference, p.title as article, COUNT(*) as citations
+WITH conference, article, citations ORDER BY citations DESC
+where citations > 0
+RETURN conference, article[0..3] as MostCitedArticles, citations
+ORDER BY conference, citations desc
 
 // Best version
 MATCH (c:Conference)<-[:ofConference]-(:Proceeding)<-[:PublishedInProceeding]-(p:Paper)<-[cite:Cites]-(q:Paper)
@@ -33,8 +32,6 @@ WHERE nParticipations >= 4
 RETURN conference, author, nParticipations
 
 
-<<<<<<< HEAD
-=======
 // Ali version
 MATCH (c:conference)<-[*]-(p:Paper)-[:writtenBy]->(a:author)
 WITH c.name AS conference, a.name AS author, COUNT(*) as nParticipations
@@ -49,7 +46,6 @@ WITH conference, COLLECT(author) as authors, COLLECT(nParticipations) as nPartic
 WITH conference, [i IN range(0, size(authors)-1) | [authors[i],nParticipations[i]]] as authors_participations
 RETURN conference, authors_participations
 
->>>>>>> obtain_data
 
 //B3:
 // Compute the impact factor of each journal
@@ -73,18 +69,3 @@ WITH j, year, publications_y2, COUNT(p) AS publications_y1
 MATCH (j:Journal)<-[:InJournal]-(v:Volume)-[:InYear]->(y:Year {year:year}), (v)<-[:PublishedInVolume]-(:Paper)<-[citation:Cites]-(:Paper)
 WITH j, publications_y2, publications_y1, COUNT(citation) AS citations_y
 RETURN j.name, toFloat(citations_y) / (publications_y1 + publications_y2) AS ImpactFactor
-
-
-//B4:
-// Find the H-index of the authors in the graph
-MATCH (a:Author)<-[:WrittenBy]-(p:Paper)<-[c:Cites]-(otherPaper:Paper)
-WITH a, p, COUNT(c) AS citations
-ORDER BY citations DESC
-WITH a, COLLECT(citations) AS citationCounts
-WITH a, REDUCE(hIndex = 0, i IN RANGE(0, SIZE(citationCounts)-1) |
-  CASE WHEN citationCounts[i] >= i+1 AND citationCounts[i+1] <= i+1
-    THEN i+1
-    ELSE hIndex END
-) AS hIndex
-RETURN a.name AS authorName, hIndex
-ORDER BY hIndex DESC
