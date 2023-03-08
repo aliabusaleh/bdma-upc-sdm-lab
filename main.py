@@ -204,10 +204,6 @@ if __name__ == '__main__':
     print(color.GREEN)
     print("Main Program Menu, Please follow the instructions! \n ")
     print(color.BLUE)
-    menu_message = "Please choose the task to perform \n (1) A.2 (create the graph and load the data) " + \
-                   "\n (2) A.3 update the graph schema (add affiliations and reviews details)\n" + \
-                   " (3) enter console mode ( execute Cypher quires) \n " + \
-                   "enter (4) to exit. \n Input: \t"
     mode = print_menu()
     while (1):
         if mode == 1:
