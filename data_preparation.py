@@ -290,7 +290,8 @@ for paper in papers:
         paper['edition'] = int(random.randint(0, 3)) # simple way to fake edition
         paper['journal'] = None
     else:
-        paper['journal']['name'] = list(journals.values())[int(random.randint(0, 10))]
+        if not paper['journal'].get('name'):
+          paper['journal']['name'] = list(journals.values())[int(random.randint(0, 10))]
         paper['venue'] = None
         # if no volume - fake it!
         if not paper['journal'].get('volume'):

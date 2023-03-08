@@ -83,12 +83,12 @@ class PropertyGraphLab:
                 CALL apoc.load.json("file://papers_json.json") YIELD value
                 MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
                 WITH p, value WHERE value.journal IS NOT null
-                CREATE (j:Journal {name: value.journal.name})
-                CREATE (v:Volume {number: value.journal.volume})
-                CREATE (v)-[:InJournal]->(j)
+                MERGE (j:Journal {name: value.journal.name})
+                MERGE (v:Volume {number: value.journal.volume})
+                MERGE (v)-[:InJournal]->(j)
                 CREATE (p)-[:PublishedInVolume]->(v)
-                CREATE (y:Year {year: p.year})
-                CREATE (v)-[:InYear]->(y)
+                MERGE (y:Year {year: value.year})
+                MERGE (v)-[:InYear]->(y)
                 '''
         return self.query(query)
 
