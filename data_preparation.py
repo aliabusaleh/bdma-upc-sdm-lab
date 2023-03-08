@@ -335,3 +335,15 @@ with open('preprocessed_data/paper_ids_json.json', 'w') as fout:
     json.dump(paper_ids, fout)
 
 
+# For future use to attach database community
+# match(k:Keyword)
+# where k.name in ["Data Modeling", "Indexing", "Big Data", "Data Querying"]
+# MERGE (t:Topic{name: "Database"})
+# MERGE (t)<-[:RelatedTo]-(k)
+#
+#
+#
+#
+# match(t:Topic)
+# where t.name in ["Data Modeling", "Indexing", "Big Data", "Data Querying"]
+# DETACH DELETE t
