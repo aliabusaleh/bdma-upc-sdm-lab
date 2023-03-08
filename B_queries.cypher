@@ -14,6 +14,15 @@ where citations > 0
 RETURN conference, article[0..3] as MostCitedArticles, citations
 ORDER BY conference, citations desc
 
+// Best version
+MATCH (c:Conference)<-[:ofConference]-(:Proceeding)<-[:PublishedInProceeding]-(p:Paper)<-[:Cites*1..]-(q:Paper)
+WITH c.name AS conference, p.title AS article, COUNT(*) as citations
+WITH conference, article, citations ORDER BY citations DESC
+WITH conference, COLLECT(article) AS articles, COLLECT(citations) AS citations
+WITH conference, range(0,size(articles)-1) AS idx, articles, citations
+WITH conference, [i IN idx | [articles[i], citations[i]]] AS ArtCit
+RETURN conference, ArtCit[0..3] AS Citations
+ORDER BY conference
 
 
 //B2:
