@@ -17,90 +17,127 @@ class color:
 
 class PropertyGraphLab:
 
+    """
+    Function init: connect to the database
+    - uri: the uri of the database
+    - user: the username of the database
+    - password: the password of the database
+
+    In case you have auth username/password, please modify the code accordingly
+    """
     def __init__(self, uri, user, password):
-        # in case you have auth username/password, please modify it  auth=(user, password)
         self.driver = GraphDatabase.driver(uri, auth=(user, password) if (user and password) else None)
 
+    """
+    Function load_data: load the data from the json files into the database
+    """
     def load_data(self):
         return self.__clean_previous_data(), \
                self._create_main_nodes(), \
+               self._create_topics_nodes(), \
                self._create_journal_nodes(), \
                self._create_conference_nodes(), \
                self._create_citation_nodes(), \
                self._create_reviewers_edges(), \
                self._clean_edges()
 
+    """
+    Function _CREATE_main_nodes: CREATE the main nodes of the graph, i.e., Paper, Author, and the edges between them
+
+    Assumptions:
+    - The json file is in the import folder of neo4j
+    - The json file is called papers_json.json
+    - The main author is the first author in the list of authors
+    """
     def _create_main_nodes(self):
-        # create paper nodes
+        print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating papers and authors..." + color.END)
+        # CREATE paper nodes
         query = '''
                 CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
-                CREATE (p:Paper {DOI: paper.externalids.DOI, CorpusId: paper.externalids.CorpusId , title: paper.title,
-                abstract: "this is nice paper!"})
-                WITH p,paper,  paper.authors AS authors
+                CREATE (p:Paper {DOI: paper.externalIds.DOI, CorpusId: paper.externalIds.CorpusId , title: paper.title, abstract: paper.abstract})
+                WITH p, paper.authors AS authors
                 UNWIND authors AS author
-                CREATE (a:Author {name: author.name, authorId: author.authorId})
+                MERGE (a:Author {name: author.name, authorId: author.authorId})
                 CREATE (p)-[w:WrittenBy]->(a)
                 SET w.mainAuthor = CASE when author = head(authors) then 1 END
                 '''
         return self.query(query)
+    
+    def _create_topics_nodes(self):
+        print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating topics and keywords..." + color.END)
+        query = '''
+            CALL apoc.load.json("file://papers_json.json") YIELD value
+            MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
+            WITH  p, value.s2FieldsOfStudy as s2fields
+            UNWIND s2fields AS s2f
+            MERGE (kw:Keyword {name: s2f.category})
+            MERGE (t:Topic {name: s2f.category})
+            CREATE (t)<-[:RelatedTo]-(kw)<-[:ContainsKeyWord]-(p)
+            '''
+        return self.query(query)
 
     def _create_journal_nodes(self):
-        # create journal nodes
+        print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating journals and volumes..." + color.END)
+        # CREATE journal nodes
         query = '''
                 CALL apoc.load.json("file://papers_json.json") YIELD value
-                match (p:Paper{CorpusId: value.externalids.CorpusId})
-                WITH value  where value.journal is not null
-                CREATE (j:Journal {name: value.journal.name})
-                CREATE (v:Volume {number: value.volume})
-                create (v)-[:PublishedInVolume]->(j)
-                CREATE (p)-[:IsIn]->(v)
-                create (y:Year {year: p.year})
-                create (v)-[:InYear]->(y)
+                MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
+                WITH p, value WHERE value.journal IS NOT null
+                MERGE (j:Journal {name: value.journal.name})
+                MERGE (v:Volume {number: value.journal.volume})
+                MERGE (v)-[:InJournal]->(j)
+                CREATE (p)-[:PublishedInVolume]->(v)
+                MERGE (y:Year {year: value.year})
+                MERGE (v)-[:InYear]->(y)
                 '''
         return self.query(query)
 
     def _create_conference_nodes(self):
-        # create conference nodes
+        print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating conferences, proceedings, and cities..." + color.END)
+        # CREATE conference nodes
         query = '''
-                CALL apoc.load.json("file://papers_json.json") YIELD value as paper
-                match (p:Paper{CorpusId: paper.externalids.CorpusId})
-                with p, paper, paper.venue as ven where paper.venue is not null
-                create (pro:Proceeding {edition: p.edition})
-                create (c:Conference {name: ven})
-                create (p)-[:PublishedInProceeding]->(pro)
-                create (y:Year {year: p.year})
-                create (pro)-[:InYear]->(y)
-                create (pro)-[:of]->(c)
-                create (ci:City {name: paper.city})
-                create (co:Country{name: paper.country})
-                create (pro)-[:Heldin]->(ci)
-                create (ci)-[:BelongsTo]->(co)
+                CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
+                MATCH (p:Paper{CorpusId: paper.externalIds.CorpusId})
+                WITH p, paper, paper.venue AS ven WHERE paper.venue IS NOT null
+                MERGE (pro:Proceeding {name: ven, edition: paper.edition})
+                MERGE (c:Conference {name: ven})
+                CREATE (p)-[:PublishedInProceeding]->(pro)
+                MERGE (y:Year {year: paper.year})
+                CREATE (pro)-[:InYear]->(y)
+                CREATE (pro)-[:ofConference]->(c)
+                MERGE (ci:City {name: paper.city})
+                MERGE (co:Country{name: paper.country})
+                CREATE (pro)-[:Heldin]->(ci)
+                CREATE (ci)-[:BelongsTo]->(co)
                   '''
         return self.query(query)
 
     def _create_citation_nodes(self):
-        # create citation nodes
+        print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating citations..." + color.END)
+        # CREATE citation nodes
         query = '''
-            call apoc.load.json("file://citation_json.json") yield value as info
-            match (src:Paper {CorpusId: info.citingcorpusid})
-            match (dst:Paper {CorpusId: info.citedcorpusid})
-            create (src)-[:Cites]->(dst)
+            CALL apoc.load.json("file://citation_json.json") YIELD value AS info
+            MATCH (src:Paper {CorpusId: info.citingCorpusId})
+            MATCH (dst:Paper {CorpusId: info.citedCorpusId})
+            CREATE (src)-[:Cites]->(dst)
                   '''
         return self.query(query)
 
     def _create_reviewers_edges(self):
-        # create reviewers edges
+        print(color.BOLD + color.UNDERLINE + color.GREEN + "Creating reviewers..." + color.END)
+        # CREATE reviewers edges
         query = '''
             CALL apoc.load.json("file://papers_json.json") YIELD value
-            match (p:Paper{CorpusId: value.externalids.CorpusId})
-            WITH p, value.reviewers as reviewers
-            unwind reviewers as reviewer
-            match (a:Author{authorId: reviewer.authorId})
-                create (p)-[:ReviewedBy ]->(a)
+            MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
+            WITH p, value.reviewers AS reviewers
+            UNWIND reviewers AS reviewer
+            MATCH (a:Author{authorId: reviewer})
+            CREATE (p)-[:ReviewedBy]->(a)
                   '''
         return self.query(query)
 
     def _clean_edges(self):
+        print(color.BOLD + color.UNDERLINE + color.GREEN + "Cleaning edges..." + color.END)
         query = '''
         CALL apoc.periodic.iterate(
           "MATCH (a)-[r]->(b)
@@ -149,6 +186,7 @@ class PropertyGraphLab:
         if inp == 'N':
             exit(-1)
         else:
+            print(color.DARKCYAN + 'Deleting all nodes and edges... \n')
             query = '''
                     MATCH (n)
                     DETACH DELETE n
@@ -159,7 +197,7 @@ class PropertyGraphLab:
 if __name__ == '__main__':
     graph_handler = PropertyGraphLab("bolt://localhost:7687", "neo4j", "password")
     print(color.GREEN)
-    print("hello, world! Cypher is speaking! connection established \n ")
+    print("Hello, world! Cypher is speaking! Connection established. \n ")
     print(color.BLUE)
     graph_handler.load_data()
     print(color.GREEN + 'Database initiated and loaded, see you!')
