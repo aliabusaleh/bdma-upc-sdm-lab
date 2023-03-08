@@ -4,6 +4,15 @@ import random
 ## Papers
 papers = [json.loads(l) for l in open("semantic_sch_data/papers.json", "r", encoding="utf8").readlines()]
 
+# If an author of a paper has authorId null, we delete it
+for paper in papers:
+    paper['authors'] = [a for a in paper['authors'] if a['authorId'] is not None]
+
+# If the year of a paper is null, we change it to 2000
+for paper in papers:
+    if paper['year'] is None:
+        paper['year'] = 2000
+
 ## Citations
 citations = [json.loads(l) for l in
              open("semantic_sch_data/citations.json", "r", encoding="utf8").readlines()]
@@ -262,16 +271,18 @@ affiliations = [
 # build map to paper - authors
 paper_authors = {}
 for paper in papers:
-    paper_authors[paper['externalIds']['CorpusId']] = [author['authorId'] for author in paper['authors']]
+    paper_authors[paper['externalIds']['CorpusId']] = [author['authorId'] for author in paper['authors'] if author['authorId'] is not None]
 
 paper_ids = list(set([paper["externalIds"]["CorpusId"] for paper in papers]))
 
 authors_ids = []
 for paper in papers:
-    authors_ids.extend([author['authorId'] for author in paper['authors']])
+    authors_ids.extend([author['authorId'] for author in paper['authors'] if author['authorId'] is not None and author['authorId'] not in authors_ids]) 
     conidx_cty = int(random.randint(0, 5))
     paper['country'] = countries[conidx_cty]['name']
     paper['city'] = countries[conidx_cty]['city']
+    if paper['abstract'] is None:
+        paper['abstract'] = "No abstract available"
     # As there are few conferences, we fake one with probability 1/3
     if not paper.get('journal') or random.randint(0, 2) == 0:
         conidx = int(random.randint(0, 12))
