@@ -18,6 +18,8 @@ In the first week, we are required to:
 
 ## Prerequisites
  * Neo4j version [neo4j-community-4.4.18](https://neo4j.com/download-center/#community)
+ * Neo4j APOC library version [apoc-4.4.0.14-core.jar](https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases)
+ * Neo4j Graph Data science library [neo4j-graph-data-science-2.3.1.jar](https://github.com/neo4j/graph-data-science/releases)
  * Java JDK version [11](https://www.oracle.com/es/java/technologies/javase/jdk11-archive-downloads.html)
  * Other python libraries mentioned [here](requirements.txt)
 
@@ -29,12 +31,14 @@ for f in $(curl https://s3-us-west-2.amazonaws.com/ai2-s2ag/samples/MANIFEST.txt
   do curl --create-dirs "https://s3-us-west-2.amazonaws.com/ai2-s2ag/$f" -o $f
 done
 `` <br>
-* Copy <b>apoc-4.4.0.14-core.jar</b> into ``./path/neo4j-community-4.4.18/plugins``
+* Copy <br> <b>apoc-4.4.0.14-core.jar <br> </b> and <b> <br> neo4j-graph-data-science-2.3.1.jar</b> <br> into <br> ``./path/neo4j-community-4.4.18/plugins``
   * Path is your path for the neo4j
 * Edit ``./path/neo4j-community-4.4.18/conf/neo4j.conf``
   * Create Database ``dbms.default_database=GraphLab``
   * Add ``apoc.import.file.enabled=true`` to enable APOC plugin
   * Disable authorization ``dbms.security.auth_enabled=false``
+  * Enable APOC, GDS, ALGO ``dbms.security.procedures.unrestricted=apoc.*, algo.*, gds.*``
+* Save the changes, and restart neo4j server.
 
 ### Designing the Graph 
 
