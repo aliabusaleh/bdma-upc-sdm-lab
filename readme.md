@@ -72,58 +72,79 @@ done
   * Creating the main Nodes and their relation (Paper And Author) <br>
     ```
     CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
-    CREATE (p:Paper {DOI: paper.externalids.DOI, CorpusId: paper.externalids.CorpusId , title: paper.title,
-    abstract: "this is nice paper!"})
-    WITH p,paper,  paper.authors AS authors
+    CREATE (p:Paper {DOI: paper.externalIds.DOI, CorpusId: paper.externalIds.CorpusId , title: paper.title, abstract: paper.abstract})
+    WITH p, paper.authors AS authors
     UNWIND authors AS author
-    CREATE (a:Author {name: author.name, authorId: author.authorId})
+    MERGE (a:Author {name: author.name, authorId: author.authorId})
     CREATE (p)-[w:WrittenBy]->(a)
     SET w.mainAuthor = CASE when author = head(authors) then 1 END
     ```
-  * Create Journal-related nodes and relations  <br>
+  * Create Topic-related nodes and relations  <br>
     ```
     CALL apoc.load.json("file://papers_json.json") YIELD value
-    match (p:Paper{CorpusId: value.externalids.CorpusId})
-    WITH value  where value.journal is not null
-    CREATE (j:Journal {name: value.journal.name})
-    CREATE (v:Volume {number: value.volume})
-    create (v)-[:PublishedInVolume]->(j)
-    CREATE (p:Paper{CorpusId: value.CorpusId})-[:IsIn]->(v)
-    create (y:Year {year: p.year})
-    create (v)-[:InYear]->(y)
+    MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
+    WITH  p, value.s2FieldsOfStudy as s2fields
+    UNWIND s2fields AS s2f
+    MERGE (kw:Keyword {name: s2f.category})
+    MERGE (t:Topic {name: s2f.category})
+    CREATE (t)<-[:RelatedTo]-(kw)<-[:ContainsKeyWord]-(p)
     ``` 
-
-  * Create Conference-related nodes and relations <br>
+  * Create Journal-related nodes and relations <br>
     ```
-    CALL apoc.load.json("file://papers_json.json") YIELD value as paper
-    match (p:Paper{CorpusId: paper.externalids.CorpusId})
-    with p, paper, paper.venue as ven where paper.venue is not null```
-    create (pro:Proceeding {edition: p.edition})* Creating citation relationships 
-    create (c:conference {name: ven})
-    create (p)-[:PublishedInProceeding]->(pro)```
-    create (y:Year {year: p.year})CALL apoc.load.json("file:E:/citation_json.json") yield value as info 
-    create (pro)-[:InYear]->(y)match (src:paper {CorpusId: info.citingcorpusid})
-    create (pro)-[:of]->(c)match (dst:paper {CorpusId: info.citedcorpusid})
-    create (ci:City {name: paper.city})create (src)-[:cites]->(dst)
-    create (co:Country{name: paper.country})```
-    create (pro)-[:Heldin]->(ci)
-    create (ci)-[:BelongsTo]->(co)* View schema <br> 
+    CALL apoc.load.json("file://papers_json.json") YIELD value
+    MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
+    WITH p, value WHERE value.journal IS NOT null
+    MERGE (j:Journal {name: value.journal.name})
+    MERGE (v:Volume {number: value.journal.volume})
+    MERGE (v)-[:InJournal]->(j)
+    CREATE (p)-[:PublishedInVolume]->(v)
+    MERGE (y:Year {year: value.year})
+    MERGE (v)-[:InYear]->(y)
     ```
+    * Create Conference-related nodes and relations <br>
+      ```
+      CALL apoc.load.json("file://papers_json.json") YIELD value AS paper
+      MATCH (p:Paper{CorpusId: paper.externalIds.CorpusId})
+      WITH p, paper, paper.venue AS ven WHERE paper.venue IS NOT null
+      MERGE (pro:Proceeding {name: ven, edition: paper.edition})
+      MERGE (c:Conference {name: ven})
+      CREATE (p)-[:PublishedInProceeding]->(pro)
+      MERGE (y:Year {year: paper.year})
+      CREATE (pro)-[:InYear]->(y)
+      CREATE (pro)-[:ofConference]->(c)
+      MERGE (ci:City {name: paper.city})
+      MERGE (co:Country{name: paper.country})
+      CREATE (pro)-[:Heldin]->(ci)
+      CREATE (ci)-[:BelongsTo]->(co)
+      ```
   * Create citations' relationships <br>
     ```
-    call apoc.load.json("file://citation_json.json") yield value as info
-    match (src:Paper {CorpusId: info.citingcorpusid})
-    match (dst:Paper {CorpusId: info.citedcorpusid})
-    create (src)-[:Cites]->(dst)
+    CALL apoc.load.json("file://citation_json.json") YIELD value AS info
+    MATCH (src:Paper {CorpusId: info.citingCorpusId})
+    MATCH (dst:Paper {CorpusId: info.citedCorpusId})
+    CREATE (src)-[:Cites]->(dst)
     ```
   * Create reviewers edges <br>
     ```
     CALL apoc.load.json("file://papers_json.json") YIELD value
-    match (p:Paper{CorpusId: value.externalids.CorpusId})
-    WITH p, value.reviewers as reviewers
-    unwind reviewers as reviewer
-    match (a:Author{authorId: reviewer.authorId})
-    create (p)-[:ReviewedBy ]->(a)
+    MATCH (p:Paper{CorpusId: value.externalIds.CorpusId})
+    WITH p, value.reviewers AS reviewers
+    UNWIND reviewers AS reviewer
+    MATCH (a:Author{authorId: reviewer})
+    CREATE (p)-[:ReviewedBy]->(a)
+    ```
+  * Change data to have database-related papers
+    ```
+    // Remove old topics
+    MATCH (t:Topic)
+    WHERE t.name IN ["Data Modeling", "Indexing", "Big Data", "Data Querying"]
+    DETACH DELETE t;
+    // impute the topic
+    match(k:Keyword)
+    where k.name in ["Data Modeling", "Indexing", "Big Data", "Data Querying"]
+    MERGE (t:Topic{name: "Database"})
+    MERGE (t)<-[:RelatedTo]-(k) 
+
     ```
   * Clean duplicate edges (which might happen due to randomization)  <br>
     ```
@@ -156,4 +177,8 @@ done
   MATCH (n:Paper)-[r:ReviewedBy]->(a:Author)
   SET r.details = "es bien!"
   ```
+
+## Week 2
+All information can be found here [Part B](PartB_AliAbuSaleh_JoseAntonioLorencio.py), [Part C](PartC_AliAbuSaleh_JoseAntonioLorencio.py)
+
 
