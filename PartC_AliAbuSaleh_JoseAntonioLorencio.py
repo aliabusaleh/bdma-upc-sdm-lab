@@ -74,8 +74,33 @@ class PropertyGraphLab:
         '''
         return self.query(query)
 
+    def _project_top_100(self):
+        # use graph generated in C.2
+        if not self._check_if_graph_exits('papers'):
+            self._project_database_community_graph()
+        query = '''
+        CALL gds.graph.project.cypher('top100Papers', '
+        CALL gds.pageRank.stream("papers")
+        YIELD nodeId, score
+        WITH gds.util.asNode(nodeId) as paper, score, nodeId
+        WHERE score > 0     
+        WITH paper, score, nodeId
+        MATCH (paper)-[:Cites]->(citedPaper)
+        WITH paper, COUNT(DISTINCT citedPaper) AS numCitations, score, nodeId
+        RETURN nodeId as id
+        ORDER BY score DESC
+        LIMIT 100',
+        'MATCH (p:Paper)-[:WrittenBy]-(q:Author)
+        RETURN id(p) AS source, id(q) AS target',
+        { validateRelationships: false }
+        ) YIELD
+               graphName AS graph, nodeQuery, nodeCount AS nodes, relationshipQuery, relationshipCount AS rels;
+        '''
+        return self.query(query)
+
     def find_top_papers_pagerank(self):
-        if not self._check_if_graph_exits():
+        # use graph generated in C.2
+        if not self._check_if_graph_exits('papers'):
             self._project_database_community_graph()
         query = '''
             // Use projected Papers
@@ -85,31 +110,31 @@ class PropertyGraphLab:
             WHERE score > 0
         
             // Find the top papers based on incoming page rank and the number of citations from the same community
-            RETURN paper.title AS PaperTitle, score AS PageRank
+            RETURN DISTINCT paper.title AS PaperTitle, score AS PageRank
             ORDER BY score DESC
             LIMIT 100
         '''
         return self.query(query)
 
-    def _check_if_graph_exits(self):
-        query = '''
-        RETURN gds.graph.exists('papers') AS personsExists
+    def _check_if_graph_exits(self, graph_name):
+        query = f'''
+        RETURN gds.graph.exists('{graph_name}') AS personsExists
         '''
         return self.query(query)[0][0]
 
     def find_gurus(self):
-        if not self._check_if_graph_exits():
-            self._project_database_community_graph()
+        # Use graph generated in C.3
+        if not self._check_if_graph_exits('top100Papers'):
+            self._project_top_100()
         query = '''
-            CALL gds.pageRank.stream('papers')
-            YIELD nodeId, score
-            WITH gds.util.asNode(nodeId) AS paper, score
-            WHERE score > 0
-            MATCH (paper)-[:WrittenBy]->(author:Author)
-            WITH author.name as guruName, collect(paper) AS papers, count(paper) AS paperCount, sum(score) AS totalScore
-            WHERE paperCount >= 2
-            RETURN  guruName, paperCount, totalScore
-            ORDER BY totalScore DESC limit 10
+              MATCH (paper)-[:Cites]->(m)
+              WHERE gds.alpha.linkprediction.commonNeighbors(paper, m, { graph: 'top100Papers' }) > 2
+              WITH paper
+              MATCH (paper)-[:WrittenBy]->(author:Author)
+              WITH author.name as guruName, collect(paper) AS papers, count(paper) AS paperCount
+              WHERE paperCount >= 2
+              RETURN  guruName as AuthorName, paperCount as NumberOfPapers
+              ORDER BY paperCount DESC limit 10
         '''
         return self.query(query)
 
