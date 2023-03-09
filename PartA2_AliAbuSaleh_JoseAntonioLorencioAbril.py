@@ -39,6 +39,7 @@ class PropertyGraphLab:
                self._create_conference_nodes(), \
                self._create_citation_nodes(), \
                self._create_reviewers_edges(), \
+               self._fix_database_relation(), \
                self._clean_edges()
 
     """
@@ -136,6 +137,20 @@ class PropertyGraphLab:
                   '''
         return self.query(query)
 
+    def _fix_database_relation(self):
+        query = '''
+        MATCH (t:Topic)
+        WHERE t.name IN ["Data Modeling", "Indexing", "Big Data", "Data Querying"]
+        DETACH DELETE t
+        '''
+        self.query(query)
+        query = '''
+        match(k:Keyword)
+        where k.name in ["Data Modeling", "Indexing", "Big Data", "Data Querying"]
+        MERGE (t:Topic{name: "Database"})
+        MERGE (t)<-[:RelatedTo]-(k) 
+        '''
+        return self.query(query)
     def _clean_edges(self):
         print(color.BOLD + color.UNDERLINE + color.GREEN + "Cleaning edges..." + color.END)
         query = '''

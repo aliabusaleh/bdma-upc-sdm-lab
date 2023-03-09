@@ -66,6 +66,7 @@ if __name__ == '__main__':
     graph_handler = PropertyGraphLab("bolt://localhost:7687", "neo4j", "password")
     print(color.GREEN)
     print("hello, world! Cypher is speaking! connection established \n ")
+    print("Extending the Graph.... \n ")
     print(color.BLUE)
     graph_handler.extend_graph()
     print(color.GREEN + 'Database extended')
