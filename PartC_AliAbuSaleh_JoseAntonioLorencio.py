@@ -33,13 +33,13 @@ class PropertyGraphLab:
         OPTIONAL match (p)-[:PublishedInVolume]->(:Volume)-[:InJournal]->(j:Journal)
         OPTIONAL match (p)-[:PublishedInProceeding]->(:Proceeding)-[:ofConference]->(c:Conference)
     
-        WITH p, j, c,
+        WITH  j, c,
              COUNT(CASE WHEN t.name = "Database" THEN 1 END) AS database_topics_count,
-             COUNT(*) AS total_topics_count,
-             CASE WHEN j.name IS NULL THEN 'Journal' ELSE 'CONFERENCE' END as source
-        WITH p, j, c, source, total_topics_count as TotalPublications, database_topics_count as DatabasePublications, (toFloat(database_topics_count) / total_topics_count * 100) as Percentage
+             COUNT(t) AS total_topics_count,
+             CASE WHEN j.name IS NULL THEN  'CONFERENCE' ELSE 'Journal' END as source
+        WITH  j, c, source, total_topics_count as TotalPublications, database_topics_count as DatabasePublications, (toFloat(database_topics_count) / total_topics_count * 100) as Percentage
         WHERE Percentage >=90
-        RETURN COALESCE(j.name, c.name) as Name, source as TypeOfInstitution,  TotalPublications, DatabasePublications, Percentage
+        RETURN COALESCE(j.name, c.name) as Name, source as TypeOfInstitution, TotalPublications, DatabasePublications, Percentage
         ORDER BY Percentage DESC
         '''
         return self.query(query)
@@ -59,13 +59,18 @@ class PropertyGraphLab:
           'MATCH (p:Paper)-[:ContainsKeyWord]->(:Keyword)-[:RelatedTo]->(t:Topic)
            OPTIONAL MATCH (p)-[:PublishedInVolume]->(:Volume)-[:InJournal]->(j:Journal)
            OPTIONAL MATCH (p)-[:PublishedInProceeding]->(:Proceeding)-[:ofConference]->(c:Conference)
-           WITH p, j, c,
+           WITH j, c,
                 COUNT(CASE WHEN t.name = "Database" THEN 1 END) AS database_topics_count,
                 COUNT(*) AS total_topics_count,
                 CASE WHEN j.name IS NULL THEN "Journal" ELSE "CONFERENCE" END as source
-           WITH p, j, c, source, total_topics_count as TotalPublications, database_topics_count as DatabasePublications, (toFloat(database_topics_count) / total_topics_count * 100) as Percentage
+           WITH j, c, source, total_topics_count as TotalPublications, database_topics_count as DatabasePublications, (toFloat(database_topics_count) / total_topics_count * 100) as Percentage
            WHERE Percentage >=90
-           RETURN id(p) as id',
+           WITH COLLECT(coalesce(j,c)) as chosen_sources
+           match (p:Paper)-[:ContainsKeyWord]->(:Keyword)-[:RelatedTo]->(t:Topic)
+           OPTIONAL MATCH (p)-[:PublishedInVolume]->(:Volume)-[:InJournal]->(j:Journal)
+           OPTIONAL MATCH (p)-[:PublishedInProceeding]->(:Proceeding)-[:ofConference]->(c:Conference)
+           where (c in chosen_sources) OR (j in chosen_sources)
+           return DISTINCT id(p) as id',
            'MATCH (p:Paper)-[:Cites]-(q:Paper)
            RETURN id(p) AS source, id(q) AS target',
            { validateRelationships: false }

@@ -140,13 +140,15 @@ class PropertyGraphLab:
     def _fix_database_relation(self):
         query = '''
         MATCH (t:Topic)
-        WHERE t.name IN ["Data Modeling", "Indexing", "Big Data", "Data Querying"]
+        WHERE t.name IN ["Data Modeling", "Indexing", "Big Data", "Data Querying", "Computer Science", "Education",
+         "Database", "Psychology", "Political Science", "Business"]
         DETACH DELETE t
         '''
         self.query(query)
         query = '''
         match(k:Keyword)
-        where k.name in ["Data Modeling", "Indexing", "Big Data", "Data Querying"]
+        where k.name in ["Data Modeling", "Indexing", "Big Data", "Data Querying", "Computer Science", "Education",
+         "Database", "Psychology", "Political Science", "Business"]
         MERGE (t:Topic{name: "Database"})
         MERGE (t)<-[:RelatedTo]-(k) 
         '''
