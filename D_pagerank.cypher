@@ -48,7 +48,6 @@ CALL gds.graph.project.cypher(
     YIELD nodeId, communityId
     WITH communityId, COLLECT(gds.util.asNode(nodeId)) AS authors
     WITH communityId, authors, size(authors) AS nAuthors
-    WITH communityId, authors, nAuthors
     ORDER BY nAuthors DESC LIMIT 1
     UNWIND authors AS author
     RETURN communityId, ID(author) AS id',
