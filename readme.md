@@ -179,6 +179,9 @@ done
   ```
 
 ## Week 2
-All information can be found here [Part B](PartB_AliAbuSaleh_JoseAntonioLorencio.py), [Part C](PartC_AliAbuSaleh_JoseAntonioLorencio.py)
+All information can be found here [Part B](PartB_AliAbuSaleh_JoseAntonioLorencioAbril.py), [Part C](PartC_AliAbuSaleh_JoseAntonioLorencioAbril.py)
+
+## Week 3
+All information can be found here [Part D](PartD_AliAbuSaleh_JoseAntonioLorencioAbril.py)
 
 

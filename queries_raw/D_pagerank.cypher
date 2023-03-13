@@ -73,6 +73,6 @@ CALL gds.pageRank.stream('cited_authors')
 YIELD nodeId, score
 WHERE nodeId = nodeIdBC
 RETURN gds.util.asNode(nodeId).name AS author, score as fullScore, scoreBC as communityScore
-ORDER BY fullScore DESC, author ASC
+ORDER BY communityScore DESC, author ASC
 
 // Using this, we can see which authors are heavily cited in the biggest community, but not in the whole graph
